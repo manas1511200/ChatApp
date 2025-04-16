@@ -30,6 +30,23 @@ class LoginViewModel : ViewModel() {
     var rePassword by mutableStateOf("")
         private set
     var showBottomSheet by mutableStateOf(false)
+    var showEmojiPicker by mutableStateOf(false)
+    var selectedEmoji by mutableStateOf("😀") // Default emoji
+    val emojiList = listOf(
+        // Faces & Emotions
+        "😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇",
+        "🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚",
+        "😋","😜","😝","😛","🤑","🤗","🤩","🤔","🤨","😐",
+        "😑","😶","🙄","😏","😒","😞","😔","😟","😕","🙁",
+        "☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠",
+        "😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥",
+        "😓","🤤","😪","😴","😷","🤒","🤕","🤢","🤮","🤧",
+        // Gestures & Hand Signs
+        "👋","🤚","🖐️","✋","🖖","👌","🤏","✌️","🤞","🤟",
+        "🤘","🤙","👈","👉","👆","👇","☝️","👍","👎","✊",
+        "👊","🤛","🤜","👏","🙌","👐","🤲","🙏"
+    )
+
 
     // Activity Result Launchers (initialized externally, e.g., in the composable)
     var takePictureLauncher: ActivityResultLauncher<Uri>? = null
@@ -136,7 +153,9 @@ class LoginViewModel : ViewModel() {
     }
 
     // --- Dummy Functions (for UI interaction) ---
-    fun onEmojiSelected() = showAlert("Emoji selected")
+    fun onEmojiSelected() {
+        showAlert("emoji selected")
+    }
 
 
     fun updateShowBottomSheet(show: Boolean) {
