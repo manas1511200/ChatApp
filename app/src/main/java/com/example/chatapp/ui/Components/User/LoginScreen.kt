@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -19,6 +20,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.chatapp.ui.components.ProfileImageSection
 import com.example.chatapp.viewmodel.LoginViewModel
+
 @Preview
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,10 +32,9 @@ fun LoginScreen(
         topBar = {
             Surface(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shadowElevation = 8.dp,
-                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+                    .fillMaxWidth() ,// Match Material 3's default TopAppBar height [[5]][[7]]
+                shadowElevation = 4.dp,
+                shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
                 color = MaterialTheme.colorScheme.primaryContainer
             ) {
                 CenterAlignedTopAppBar(
@@ -41,11 +42,14 @@ fun LoginScreen(
                         Text(
                             text = if (viewModel.isSignUp) "Create Account" else "Welcome Back",
                             style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1
+                            maxLines = 1,
+                            modifier = Modifier.padding(horizontal = 16.dp) // Prevent text overflow [[1]]
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = { navController.popBackStack() }) {
+                        IconButton(
+                            onClick = { navController.popBackStack() }
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.ArrowBack,
                                 contentDescription = "Back",
@@ -54,14 +58,11 @@ fun LoginScreen(
                         }
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        containerColor = Color.Transparent,
                         titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
-                    modifier = Modifier
-                        .fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth()
                 )
-
-
             }
         }
     ) { padding ->
@@ -91,11 +92,9 @@ fun LoginScreen(
                     shape = RoundedCornerShape(16.dp)
                 )
             }
-
         }
     }
 }
-
 
 @Composable
 fun LoginContent(
@@ -150,20 +149,21 @@ fun LoginContent(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             visualTransformation = PasswordVisualTransformation()
         )
-    if(viewModel.isSignUp) {
-        OutlinedTextField(
-            value = viewModel.rePassword,
-            onValueChange = { viewModel.updateRePassword(it) },
-            label = { Text("Confirm Password") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            visualTransformation = PasswordVisualTransformation()
-        )
-    }
+
+        if (viewModel.isSignUp) {
+            OutlinedTextField(
+                value = viewModel.rePassword,
+                onValueChange = { viewModel.updateRePassword(it) },
+                label = { Text("Confirm Password") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                visualTransformation = PasswordVisualTransformation()
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
