@@ -1,3 +1,4 @@
+// ProfileImageSection.kt
 package com.example.chatapp.ui.components
 
 import android.Manifest
@@ -5,6 +6,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,10 +15,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -24,9 +25,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import coil.compose.rememberAsyncImagePainter
 import com.example.chatapp.R
-import com.example.chatapp.utils.createImageUri // Make sure this function is correct!
 import com.example.chatapp.viewmodel.LoginViewModel
+import createImageUri
 import kotlinx.coroutines.launch
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,37 +38,38 @@ fun ProfileImageSection(
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-
-    // State to hold the temporary image URI during capture
     var tempImageUri by remember { mutableStateOf<Uri?>(null) }
 
-    //Permission Launcher
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        if (isGranted && tempImageUri != null) {
-            viewModel.updateProfileImageUri(tempImageUri) // Update ViewModel with the temp Uri
-            viewModel.takePictureLauncher?.launch(tempImageUri!!) //Non-null assertion safe as we're inside the check
+        if (isGranted) {
+            viewModel.takePictureLauncher?.let { tempImageUri?.let(it::launch) }
+                ?: viewModel.showAlert("Failed to create image file")
         } else {
-            viewModel.showAlert(if (isGranted) "Could not create image file" else "Camera permission required")
+            viewModel.showAlert("Camera permission required")
         }
     }
 
-    val takePictureLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+    val takePictureLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
         if (success && tempImageUri != null) {
-            //The image is already written to tempImageUri, no need to copy
             viewModel.updateProfileImageUri(tempImageUri)
+        } else {
+            viewModel.showAlert("Failed to capture image")
         }
-        tempImageUri = null // clear the temp Uri after capture (success or failure)
+        tempImageUri = null
         viewModel.updateShowBottomSheet(false)
     }
 
-    val pickImageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        uri?.let { viewModel.updateProfileImageUri(it) }
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let(viewModel::updateProfileImageUri)
         viewModel.updateShowBottomSheet(false)
     }
 
-    // Initialize ViewModel launchers
     LaunchedEffect(Unit) {
         viewModel.takePictureLauncher = takePictureLauncher
         viewModel.pickImageLauncher = pickImageLauncher
@@ -75,50 +78,47 @@ fun ProfileImageSection(
     Card(
         modifier = Modifier
             .size(120.dp)
+            .clip(CircleShape)
             .clickable(enabled = viewModel.isSignUp) { viewModel.updateShowBottomSheet(true) },
-        shape = CircleShape,
-        elevation = CardDefaults.cardElevation(8.dp)
+        elevation = CardDefaults.cardElevation(12.dp),
+        shape = CircleShape
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            when {
-                viewModel.profileImageUri != null -> {
-                    Image(
-                        painter = rememberAsyncImagePainter(viewModel.profileImageUri),
-                        contentDescription = "Profile",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-                else -> {
-                    Icon(
-                        painter = painterResource(R.drawable.default0),
-                        contentDescription = "Profile",
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
+            if (viewModel.profileImageUri != null) {
+                Image(
+                    painter = rememberAsyncImagePainter(viewModel.profileImageUri),
+                    contentDescription = "Profile",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Icon(
+                    painter = painterResource(R.drawable.default0),
+                    contentDescription = "Profile",
+                    modifier = Modifier.size(56.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
 
             if (viewModel.isSignUp) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(8.dp)
-                        .size(32.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            shape = CircleShape
-                        ),
+                        .padding(12.dp)
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .clickable { viewModel.updateShowBottomSheet(true) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_edit),
                         contentDescription = "Edit",
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
@@ -129,19 +129,21 @@ fun ProfileImageSection(
         ModalBottomSheet(
             onDismissRequest = { viewModel.updateShowBottomSheet(false) },
             sheetState = sheetState,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(24.dp)
+                    .animateContentSize(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = "Select Profile Photo",
                     style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                    modifier = Modifier.padding(bottom = 24.dp)
                 )
-                Spacer(modifier = Modifier.height(24.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -153,61 +155,62 @@ fun ProfileImageSection(
                                 sheetState.hide()
                             }.invokeOnCompletion {
                                 if (!sheetState.isVisible) {
-                                    // Create temp uri and launch permission check
                                     tempImageUri = createImageUri(context)
-                                    val permission = Manifest.permission.CAMERA
-                                    if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
-                                        //if already granted, just launc take picture
-                                        viewModel.handleCameraResult(tempImageUri)
-                                        tempImageUri?.let { input -> takePictureLauncher.launch(input) } // Non-null asserted in function
+                                    if (ContextCompat.checkSelfPermission(
+                                            context,
+                                            Manifest.permission.CAMERA
+                                        ) == PackageManager.PERMISSION_GRANTED
+                                    ) {
+                                        tempImageUri?.let(takePictureLauncher::launch)
                                     } else {
-                                        cameraPermissionLauncher.launch(permission)
+                                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                                     }
                                 }
                             }
                         },
-                        modifier = Modifier.size(64.dp)
+                        modifier = Modifier
+                            .size(100.dp)
+                            .padding(8.dp)
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_camera),
-                            contentDescription = "Camera",
-                            modifier = Modifier.size(32.dp)
-                        )
+                        Column {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_camera),
+                                contentDescription = "Camera",
+                                modifier = Modifier.size(40.dp)
+                            )
+                            Text(
+                                text = "Camera",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                        }
                     }
 
                     IconButton(
                         onClick = {
                             scope.launch { sheetState.hide() }.invokeOnCompletion {
-                                if (!sheetState.isVisible) {
-                                    viewModel.onGallerySelected()
-                                }
+                                if (!sheetState.isVisible) viewModel.onGallerySelected()
                             }
                         },
-                        modifier = Modifier.size(64.dp)
+                        modifier = Modifier
+                            .size(100.dp)
+                            .padding(8.dp)
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_gallery),
-                            contentDescription = "Gallery",
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-
-                    IconButton(
-                                onClick = {
-                                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                                        viewModel.onEmojiSelected()
-                                    }
-                                },
-                                modifier = Modifier.size(64.dp)
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.default6),
-                                    contentDescription = "Emoji",
-                                    modifier = Modifier.size(32.dp))
-                            }
+                        Column {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_gallery),
+                                contentDescription = "Gallery",
+                                modifier = Modifier.size(40.dp)
+                            )
+                            Text(
+                                text = "Gallery",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
                         }
-                        Spacer(modifier = Modifier.height(24.dp))
                     }
+                }
+            }
         }
     }
 }

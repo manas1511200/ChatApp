@@ -1,5 +1,4 @@
-package com.example.chatapp.utils
-
+// utils/FileUtils.kt
 import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
@@ -8,7 +7,8 @@ import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 fun createImageUri(context: Context): Uri? {
     val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
@@ -23,9 +23,7 @@ fun createImageUri(context: Context): Uri? {
         }
         context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
     } else {
-        val imageFile = File.createTempFile(
-            imageFileName, ".jpg", storageDir
-        )
+        val imageFile = File.createTempFile(imageFileName, ".jpg", storageDir)
         FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
