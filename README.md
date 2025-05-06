@@ -1,2 +1,2 @@
- a Simple android app
+ a Simple android chat app
  
